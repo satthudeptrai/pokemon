@@ -18,7 +18,7 @@
         </div>
       </div>
     </div>
-    <DialogComponent :isShow="isShow" @closeDialog="closeDialog" />
+    <DialogComponent :isShow="isShow" :pokemonInfo="pokemonInfo" @closeDialog="closeDialog" />
     <div class="pagination">
       <button @click="page--">&lt;</button>
       {{ page }}
@@ -28,7 +28,7 @@
 </template>
 
 <script>
-import {getList, getInfo} from "./api/api"
+import {getList, getInfo, getSpeciesPokemon} from "./api/api"
 import DialogComponent from "./components/DialogComponent"
 export default {
   name: "App",
@@ -45,7 +45,8 @@ export default {
         defense: 0,
         attackSp: 0,
         defenseSp: 0,
-        speed: 0
+        speed: 0,
+        bio: ""
       }
     }
   },
@@ -53,17 +54,43 @@ export default {
     DialogComponent
   },
   async mounted() {
-    const { data } = await getList(this.page)
-    const listPromise = data.results.map(item => getInfo(item.name))
-    Promise.all(listPromise).then(res => this.pokemons = res.map(item => item.data).sort((a, b) => a.id - b.id))
+    try {
+      const { data } = await getList(this.page)
+      const listPromise = data.results.map(item => getInfo(item.name))
+      Promise.all(listPromise).then(res => this.pokemons = res.map(item => item.data).sort((a, b) => a.id - b.id))
+    } catch (error) {
+      console.log(error);
+    }
   },
   methods: {
     async getInfoPoke(name) {
       const { data } = await getInfo(name)
       return data
     },
-    openDialog(poke) {
-
+    async openDialog(poke) {
+      try {
+        if (!poke.speciesPokemon) {
+          const { data } = await getSpeciesPokemon(poke.name);
+          const index = this.pokemons.findIndex(item => item.name === poke.name);
+          if (index != -1) {
+            this.pokemons[index].speciesPokemon = data;
+          }
+        }
+        this.pokemonInfo = {
+          name: poke.name,
+          img: poke.sprites.other.home.front_default,
+          hp: poke.stats[0].base_stat,
+          attack: poke.stats[1].base_stat,
+          defense: poke.stats[2].base_stat,
+          attackSp: poke.stats[3].base_stat,
+          defenseSp: poke.stats[4].base_stat,
+          speed: poke.stats[5].base_stat,
+          bio: poke.speciesPokemon.flavor_text_entries.find(item => item.language.name === "en" && item.version.name === "omega-ruby")?.flavor_text || ""
+        };
+        this.isShow = true;
+      } catch (error) {
+        console.log(error);
+      }
     },
     closeDialog() {
       this.isShow = false;
@@ -87,7 +114,8 @@ export default {
     width: 250px;
     margin: 5px;
     padding: 10px;
-    background-image: url("https://img.lovepik.com//photo/50007/7678.jpg_300.jpg");
+    background-image: url("@/assets/pokemon-card-bg.jpg");
+    background-size: contain;
     background-color: #e7acac;
     border: solid 5px #000;
     border-radius: 10px;
@@ -113,10 +141,10 @@ export default {
         width: 230px;
         filter: drop-shadow(0 0 10px);
       }
-      &:hover {
-        background-color: #0000;
-        box-shadow: none;
-      }
+      // &:hover {
+      //   background-color: #0000;
+      //   box-shadow: none;
+      // }
     }
     .card-list-type {
       display: flex;

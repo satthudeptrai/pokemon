@@ -13,3 +13,9 @@ export const getInfo = (name) => {
     url: `pokemon/${name}`,
   });
 }
+export const getSpeciesPokemon = (name) => {
+  return axios({
+    method: 'get',
+    url: `pokemon-species/${name}`,
+  });
+}
